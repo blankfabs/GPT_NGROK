@@ -1,4 +1,4 @@
-name: Windows RDP (ngrok)
+name: Windows RDP (ngrok FIXED)
 
 on:
   workflow_dispatch:
@@ -15,9 +15,17 @@ jobs:
     - name: Enable RDP
       shell: powershell
       run: |
-        net user runneradmin "P@ssw0rd!" || echo "User exists"
-        net localgroup administrators runneradmin || echo "Already admin"
-        reg add "HKLM\SYSTEM\CurrentControlSet\Control\Terminal Server" /v fDenyTSConnections /t REG_DWORD /d 0 /f
+        if (-not (Get-LocalUser -Name "runneradmin" -ErrorAction SilentlyContinue)) {
+          net user runneradmin "P@ssw0rd!" /add
+        }
+
+        if (-not (Get-LocalGroupMember -Group "Administrators" -Member "runneradmin" -ErrorAction SilentlyContinue)) {
+          net localgroup Administrators runneradmin /add
+        }
+
+        reg add "HKLM\SYSTEM\CurrentControlSet\Control\Terminal Server" `
+          /v fDenyTSConnections /t REG_DWORD /d 0 /f
+
         Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
 
     - name: Download ngrok
@@ -30,10 +38,8 @@ jobs:
       shell: powershell
       run: |
         if ([string]::IsNullOrEmpty($Env:NGROK_AUTH_TOKEN)) {
-          Write-Error "NGROK_AUTH_TOKEN is NOT set"
+          Write-Error "NGROK_AUTH_TOKEN is missing"
           exit 1
-        } else {
-          Write-Output "NGROK_AUTH_TOKEN detected"
         }
 
     - name: Configure ngrok
@@ -45,7 +51,7 @@ jobs:
       shell: powershell
       run: |
         Start-Process -NoNewWindow -FilePath ".\ngrok.exe" -ArgumentList "tcp 3389"
-        Start-Sleep -Seconds 10
+        Start-Sleep 10
         Invoke-RestMethod http://127.0.0.1:4040/api/tunnels
 
     - name: Keep session alive

@@ -1,4 +1,4 @@
-name: Windows RDP (ngrok FIXED)
+name: Windows RDP (FINAL)
 
 on:
   workflow_dispatch:
@@ -28,19 +28,22 @@ jobs:
 
         Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
 
-    - name: Download ngrok
+    - name: Download ngrok (NO HANG)
       shell: powershell
       run: |
-        Invoke-WebRequest https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip -OutFile ngrok.zip
+        $ProgressPreference = 'SilentlyContinue'
+        curl.exe -L -o ngrok.zip https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip
         Expand-Archive ngrok.zip -DestinationPath .
+        Write-Output "ngrok downloaded successfully"
 
     - name: Verify ngrok token
       shell: powershell
       run: |
         if ([string]::IsNullOrEmpty($Env:NGROK_AUTH_TOKEN)) {
-          Write-Error "NGROK_AUTH_TOKEN is missing"
+          Write-Error "NGROK_AUTH_TOKEN missing"
           exit 1
         }
+        Write-Output "ngrok token OK"
 
     - name: Configure ngrok
       shell: powershell
